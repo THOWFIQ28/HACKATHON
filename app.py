@@ -7,7 +7,7 @@ from streamlit_image_coordinates import streamlit_image_coordinates
 # Load color dataset
 @st.cache_data
 def load_colors():
-    df = pd.read_csv("colors.csv")
+    df = pd.read_csv("colors.csv", sep='\t')  # Ensure your CSV uses tabs
     return df
 
 color_data = load_colors()
@@ -20,20 +20,21 @@ def get_color_name(R, G, B, color_data):
     closest_color = None
     for _, row in color_data.iterrows():
         try:
-            # Safely convert values to int before math operations
-            d = ((int(R) - int(row['R']))**2 +
-                 (int(G) - int(row['G']))**2 +
-                 (int(B) - int(row['B']))**2) ** 0.5
-
+            # ✅ Fixed Euclidean distance formula
+            d = ((R - int(row['R']))**2 + (G - int(row['G']))**2 + (B - int(row['B']))**2) ** 0.5
             if d < min_dist:
                 min_dist = d
                 closest_color = row
         except Exception as e:
             st.write(f"Error reading row: {row} - {e}")
-    return closest_color if closest_color is not None else {
-        'color_name': 'Unknown',
-        'hex': '#000000'
-    }
+    
+    if closest_color is not None:
+        return closest_color
+    else:
+        return {
+            'color_name': 'Unknown',
+            'hex': '#000000'
+        }
 
 # Streamlit UI
 st.title("🎨 Color Detection from Image (No OpenCV)")
@@ -57,9 +58,10 @@ if uploaded_file is not None:
 
             color_info = get_color_name(r, g, b, color_data)
             hex_color = color_info['hex']
+            color_name = color_info['color_name']
 
             st.markdown(f"""
-            ### 🎯 Detected Color: {color_info['color_name']}
+            ### 🎯 Detected Color: {color_name}
             - RGB: ({r}, {g}, {b})
             - HEX: {hex_color}
             """)
@@ -67,4 +69,4 @@ if uploaded_file is not None:
             <div style="width:100px; height:50px; background-color:{hex_color}; border:1px solid #000;"></div>
             """, unsafe_allow_html=True)
         else:
-            st.warning("Clicked outside image bounds.")
+            st.warning("⚠️ Clicked outside image bounds.")
